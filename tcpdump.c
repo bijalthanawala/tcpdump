@@ -929,14 +929,18 @@ main(int argc, char **argv)
 
 #ifdef HAVE_PCAP_FINDALLDEVS
 			/*
-			 * If the argument is a number, treat it as
+			 * If the argument is a number, it could be 
 			 * an index into the list of adapters, as
 			 * printed by "tcpdump -D".
+			 * (Such use-case is useful on Windows, where more than
+			 * one interface can have the same name)
 			 *
-			 * This should be OK on UNIX systems, as interfaces
-			 * shouldn't have names that begin with digits.
-			 * It can be useful on Windows, where more than
-			 * one interface can have the same name.
+			 * OR
+			 *
+			 * A numeric argument could actually be name of the 
+			 * interface
+			 *
+			 * Try both possibilities.
 			 */
 			devnum = strtol(optarg, &end, 10);
 			if (optarg != end && *end == '\0') {
@@ -946,13 +950,21 @@ main(int argc, char **argv)
 				if (pcap_findalldevs(&devlist, ebuf) < 0)
 					error("%s", ebuf);
 				/*
-				 * Look for the devnum-th entry in the
-				 * list of devices (1-based).
+				 * Look for:
+				 *
+				 * The devnum-th entry in the list of 
+				 * devices (1-based)
+				 *
+				 * OR
+				 *
+				 * A device by name 'devnum' (optarg) 
 				 */
 				for (i = 0, dev = devlist;
 				    i < devnum-1 && dev != NULL;
-				    i++, dev = dev->next)
-					;
+				    i++, dev = dev->next) {
+					if(!strcmp(optarg,dev->name))
+						break;
+				}
 				if (dev == NULL)
 					error("Invalid adapter index");
 				device = strdup(dev->name);
